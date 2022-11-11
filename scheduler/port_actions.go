@@ -37,7 +37,6 @@ func (c PortFilter) Filter(scheduler *Scheduler, resourceRequests []ResourceRequ
 		for _, request := range resourceRequests {
 			if rr, ok := request.(PortBindingResourceRequest); ok {
 				if !portPool.ArePortsAvailable(rr.PortRequests, rr.ResourceUUID) {
-					log.Infof("Host %s is NOT qualified for instance %s port request %+v", host, rr.ResourceUUID, rr.PortRequests)
 					qualified = false
 					break
 				}

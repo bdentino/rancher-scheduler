@@ -1,7 +1,6 @@
 package scheduler
 
 import "strings"
-import "github.com/rancher/log"
 
 const (
 	requireAnyLabel = "io.rancher.scheduler.require_any"
@@ -18,7 +17,6 @@ func (l LabelFilter) Filter(scheduler *Scheduler, resourceRequest []ResourceRequ
 		qualified := true
 		for _, constraint := range constraints {
 			if !constraint.Match(host, scheduler, context) {
-				log.Infof("Host %s is NOT qualified for context %v", host, context)
 				qualified = false
 			}
 		}
@@ -26,7 +24,6 @@ func (l LabelFilter) Filter(scheduler *Scheduler, resourceRequest []ResourceRequ
 			qualifiedHosts = append(qualifiedHosts, host)
 		}
 	}
-	log.Infof("Hosts %s are qualified for context %+v", strings.Join(qualifiedHosts, ","), context)
 	return qualifiedHosts
 }
 
@@ -44,12 +41,10 @@ type RequireAnyLabelContraints struct{}
 func (c RequireAnyLabelContraints) Match(host string, s *Scheduler, context Context) bool {
 	p, ok := s.hosts[host].pools["hostLabels"]
 	if !ok {
-		// log.Infof("Host %s is qualified because there is no host label pool", host)
 		return true
 	}
 	val, ok := p.(*LabelPool).Labels[requireAnyLabel]
 	if !ok || val == "" {
-		// log.Infof("Host %s is qualified because there are no taint labels in the pool", host)
 		return true
 	}
 	labelSet := parseLabel(val)
@@ -58,18 +53,15 @@ func (c RequireAnyLabelContraints) Match(host string, s *Scheduler, context Cont
 		for _, ls := range containerLabels {
 			if value == "" {
 				if _, ok := ls[key]; ok {
-					log.Infof("Host %s is qualified because it has label %s", host, key)
 					return true
 				}
 			} else {
 				if ls[key] == value {
-					log.Infof("Host %s is qualified because it has label %s=%s", host, key, value)
 					return true
 				}
 			}
 		}
 	}
-	log.Infof("Host %s is not qualified because it does not have any tolerations for %+v", host, labelSet)
 	return false
 }
 

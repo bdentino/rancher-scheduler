@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"strings"
 	"time"
 
 	"reflect"
@@ -68,8 +67,6 @@ func (s *Scheduler) PrioritizeCandidates(resourceRequests []ResourceRequest, con
 
 	defer s.setLastEvent()
 
-	log.Infof("Prioritizing candidates with resources %+v for %+v", resourceRequests, context)
-
 	filteredHosts := []string{}
 	for host := range s.hosts {
 		filteredHosts = append(filteredHosts, host)
@@ -80,8 +77,6 @@ func (s *Scheduler) PrioritizeCandidates(resourceRequests []ResourceRequest, con
 		filteredHosts = filter.Filter(s, resourceRequests, context, filteredHosts)
 	}
 	filteredHosts = sortHosts(s, resourceRequests, context, filteredHosts)
-
-	log.Infof("Prioritized hosts %s", strings.Join(filteredHosts, ","))
 	return filteredHosts, nil
 }
 
