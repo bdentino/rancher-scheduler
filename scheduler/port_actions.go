@@ -36,7 +36,7 @@ func (c PortFilter) Filter(scheduler *Scheduler, resourceRequests []ResourceRequ
 		qualified := true
 		for _, request := range resourceRequests {
 			if rr, ok := request.(PortBindingResourceRequest); ok {
-				if !portPool.ArePortsAvailable(rr.PortRequests) {
+				if !portPool.ArePortsAvailable(rr.PortRequests, rr.ResourceUUID) {
 					qualified = false
 					break
 				}
@@ -138,13 +138,13 @@ func (p *PortResourcePool) ReserveIPPort(ip string, port int64, protocol string,
 			// before reserving on the ghost map, check 0.0.0.0 pool to make sure we cover this case:
 			// Host Label only has 0.0.0.0, and container A use 0.0.0.0:8080:8080, container B use 192.168.1.1:8080:8080, should fail.
 			if _, ok := p.PortBindingMapTCP[defaultIP]; ok {
-				if portMap[defaultIP][port] != "" {
+				if portMap[defaultIP][port] != "" && portMap[defaultIP][port] != instanceUUID {
 					return errors.Errorf("Can not reserve Port %v on IP %v, port is used by %v", port, ip, defaultIP)
 				}
 			}
 			//Host Label 192.168.1.1, 192.168.1.2, Container A use 0.0.0.0:8080:8080(ghost map), container B use 192.168.1.3:8080:8080, should fail.
 			if _, ok := p.GhostMapTCP[defaultIP]; ok {
-				if ghostMap[defaultIP][port] != "" {
+				if ghostMap[defaultIP][port] != "" && ghostMap[defaultIP][port] != instanceUUID {
 					return errors.Errorf("Can not reserve Port %v on IP %v, port is used by %v", port, ip, defaultIP)
 				}
 			}
@@ -200,7 +200,7 @@ func (p *PortResourcePool) ReserveIPPort(ip string, port int64, protocol string,
 		// if ip is 0.0.0.0, do a check on all ghost ip before reserving
 		if ip == defaultIP {
 			for gip, m := range ghostMap {
-				if m[port] != "" {
+				if m[port] != "" && m[port] != instanceUUID {
 					return errors.Errorf("Can not reserve Port %v on IP %v, Port is used by IP %v", port, ip, gip)
 				}
 			}
@@ -253,7 +253,7 @@ func (p *PortResourcePool) ReleasePort(ip string, port int64, protocol string, u
 	}
 }
 
-func (p *PortResourcePool) ArePortsAvailable(ports []PortSpec) bool {
+func (p *PortResourcePool) ArePortsAvailable(ports []PortSpec, instanceUUID string) bool {
 L:
 	for ip, portMap := range p.PortBindingMapTCP {
 		portMapTCP := portMap
@@ -263,38 +263,44 @@ L:
 			for _, port := range ports {
 				if port.Protocol == "tcp" {
 					for _, m := range p.GhostMapTCP {
-						if m[port.PublicPort] != "" {
+						if m[port.PublicPort] != "" && m[port.PublicPort] != instanceUUID {
 							return false
 						}
 					}
 				} else {
 					for _, m := range p.GhostMapUDP {
-						if m[port.PublicPort] != "" {
+						if m[port.PublicPort] != "" && m[port.PublicPort] != instanceUUID {
 							return false
 						}
 					}
 				}
 			}
 		}
+
+
 		for _, port := range ports {
 			if port.Protocol == "tcp" {
 				if port.IPAddress != "" {
-					if ip != port.IPAddress || portMapTCP[port.PublicPort] != "" {
+					if ip != port.IPAddress {
 						continue L
+					} else if portMapTCP[port.PublicPort] != "" && portMapTCP[port.PublicPort] != instanceUUID {
+						return false
 					}
 					continue
 				}
-				if portMapTCP[port.PublicPort] != "" {
+				if portMapTCP[port.PublicPort] != "" && portMapTCP[port.PublicPort] != instanceUUID {
 					continue L
 				}
 			} else {
 				if port.IPAddress != "" {
-					if ip != port.IPAddress || portMapUDP[port.PublicPort] != "" {
+					if ip != port.IPAddress {
 						continue L
+					} else if portMapUDP[port.PublicPort] != "" && portMapUDP[port.PublicPort] != instanceUUID {
+						return false
 					}
 					continue
 				}
-				if portMapUDP[port.PublicPort] != "" {
+				if portMapUDP[port.PublicPort] != "" && portMapUDP[port.PublicPort] != instanceUUID {
 					continue L
 				}
 			}
