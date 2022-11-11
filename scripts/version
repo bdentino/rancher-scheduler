@@ -1,4 +1,5 @@
 #!/bin/bash
+export REPO=bdentino
 
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     DIRTY="-dirty"
@@ -12,7 +13,7 @@ if [[ -z "$DIRTY" && -n "$GIT_TAG" ]]; then
     IMAGE_VERSION=${VERSION}
 else
     VERSION="${COMMIT}${DIRTY}"
-    IMAGE_VERSION=dev
+    IMAGE_VERSION=${COMMIT}-dev
 fi
 
 if [ -z "$ARCH" ]; then
